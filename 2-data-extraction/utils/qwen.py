@@ -1,0 +1,136 @@
+
+import requests
+import json
+import re
+
+"""Simplified module for interacting with the LLM API using only port, fixed JSON header, and JSON payload."""
+
+API_HEADER = {"Content-Type": "application/json"}
+
+def infer(payload: dict, port: int = 6000 , host:str="localhost") -> dict:
+    """
+    Send a JSON payload to the LLM API and return the response.
+    Args:
+        payload (dict): The inference payload.
+        port (int): The port for the API endpoint.
+    Returns:
+        dict: The model's response.
+    """
+    url = f"http://{host}:{port}/v1/chat/completions"
+    print(url)
+    try:
+        response = requests.post(url, headers=API_HEADER, json=payload)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        raise RuntimeError(f"Inference failed: {e}")
+
+def getTokenCount(text: str, port: int = 6000) -> int:
+    """
+    Send a POST request to the /tokenize endpoint to get the token count for the given text.
+    Args:
+        text (str): The text to tokenize.
+        port (int): The port for the API endpoint.
+    Returns:
+        int: The number of tokens in the text.
+    """
+    url = f"http://localhost:{port}/tokenize"
+    payload = {
+        "content": text,
+        "add_special": True,
+        "parse_special": True,
+        "with_pieces": True
+    }
+    try:
+        response = requests.post(url, headers=API_HEADER, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        tokens = data.get("tokens", [])
+        return len(tokens)
+    except Exception as e:
+        raise RuntimeError(f"Token count request failed: {e}")
+
+
+def extract_article_metadata(page1: str, page2 : str , port: int = 6000 ,host="localhost") -> dict:
+    """
+    Extract metadata from two page texts using the local LLM.
+
+    Args:
+        page1 (str): Text of the first page.
+        page2 (str): Text of the second page.
+        port (int): The port of the running llama.cpp server.
+
+    Returns:
+        dict: Extracted metadata in JSON format, or None if failed.
+    """
+    pages = [page1,page2]
+    # 1. Validation & Pre-processing
+    if not pages or all(not p.strip() for p in pages):
+        print("Warning: Received empty page list.")
+        return {}
+
+    # We only need the first 2 pages for metadata (Title, Abstract, Authors usually appear here).
+    # Joining with a separator helps the model understand page breaks, though not strictly necessary.
+    joined_text = "\n--- PAGE BREAK ---\n".join(pages[:2])
+
+    # 2. Redefined 
+    
+    system_instruction = (
+        "You are a strict API endpoint for Arabic bibliometrics. "
+        "Output ONLY raw JSON. Do not use Markdown formatting (```json)."
+    )
+    
+    user_prompt = f"""
+    Extract metadata from the text below into this exact JSON structure:
+    ignore unidentifiable names and ocr noise in authors. 
+    
+    {{
+      "title": "String (Original Arabic title)",
+      "abstract_ar": "String (VERBATIM copy of the Arabic abstract. Do NOT summarize, edit, or truncate. Preserve all original text.)",
+      "general_field": "String (Broad category in ENGLISH, e.g., Law, Medicine)",
+      "authors": ["string", "string",....] (List of names only. Remove titles like Dr., Prof., أ.د, د.),
+      "keywords":["string", "string",....] (list of keywords as they are )
+      "publish_date": "YYYY-MM-DD (Use YYYY-01-01 if only year exists)"
+    }}
+    
+    ### INPUT TEXT:
+    \"\"\"
+    {joined_text}
+    \"\"\"
+    """
+
+    # 3. Construct Payload
+    payload = {
+        "model": "/models/Qwen2.5-7B-Instruct-Q4_K_M.gguf", # Ensure this matches your container path
+        "messages": [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": 0.1,    # Low temp for factual extraction
+        #"max_tokens": 2048,    # Enough for abstract + metadata
+        "stream": False,
+        "response_format": {"type": "json_object"}
+    }
+
+    # 4. Call Inference
+    try:
+        response_data = infer(payload, port=port,host=host)
+        content = response_data['choices'][0]['message']['content']
+
+        # 5. Parse and Clean Response
+        # Regex to extract JSON block in case the model adds "Here is your JSON:" chatter
+        json_match = re.search(r"\{.*\}", content, re.DOTALL)
+        
+        if json_match:
+            clean_json_str = json_match.group(0)
+            return json.loads(clean_json_str)
+        else:
+            # Fallback: try parsing the whole string
+            return json.loads(content)
+
+    except json.JSONDecodeError:
+        print(f"Error: Model output was not valid JSON.\nRaw Output: {content}")
+        return None
+    except Exception as e:
+        print(f"Error during extraction: {e}")
+        return None

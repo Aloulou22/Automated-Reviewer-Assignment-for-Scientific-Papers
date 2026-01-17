@@ -1,0 +1,42 @@
+services:
+  qwen-extractor-1:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: qwen-extractor-1
+
+    ports:
+      - "6000:8080"
+
+    volumes:
+      - ./gguf:/models:z
+      # - ./ssl:/ssl:z   # (Optional) For SSL certificates
+
+    environment:
+      # --- Core Model & Server Settings ---
+      - LLAMA_ARG_MODEL=/models/Qwen2.5-7B-Instruct-Q4_K_M.gguf
+      - LLAMA_ARG_ALIAS=qwen-extractor-1
+      # --- Quality & Context Settings ---
+        # ---- Context capacity ----
+      - LLAMA_ARG_CTX_SIZE=8192
+      - LLAMA_ARG_N_PREDICT=-1
+
+      # ---- Turn ON continuous batching ----
+      - LLAMA_ARG_CONT_BATCHING=1
+
+      # ---- Batch/UBatch for CPU inference ----
+      - LLAMA_ARG_BATCH=2048
+      - LLAMA_ARG_UBATCH=256
+
+      # ---- Threads ----
+      - LLAMA_ARG_THREADS=6
+      - LLAMA_ARG_THREADS_HTTP=1
+
+      # ---- KV Cache Quantization ----
+      - LLAMA_ARG_CACHE_TYPE_K=q8_0
+      - LLAMA_ARG_CACHE_TYPE_V=q8_0
+
+      # ---- Memory ----
+      - LLAMA_ARG_MLOCK=1
+      - LLAMA_ARG_NO_MMAP=0
+
+        # ---- Performance ----
+      - LLAMA_ARG_FLASH_ATTN=1

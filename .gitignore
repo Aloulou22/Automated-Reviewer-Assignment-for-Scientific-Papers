@@ -1,0 +1,29 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+.env/
+env/
+.venv/
+
+# Build artifacts
+build/
+dist/
+docs/_build/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+.virtual_documents/
+
+*.pdf
+**/*.pdf
+*.gguf
+**/*.gguf
+# Ignore all PDFs and DOCXs under scrapping directory
+scrapping/**/*.pdf
+scrapping/**/*.docx
+raw_dataset/finalpdfs/**.pdf
+
+
