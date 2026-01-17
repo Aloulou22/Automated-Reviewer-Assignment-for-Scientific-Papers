@@ -91,13 +91,6 @@ recommended_reviewer = recommend_reviewer_logic(processed_text)
 - **Split**: 80% train (1,163) / 20% test (291)
 - **Challenge**: 97% of metadata was missing, solved via OCR
 
-## Limitations
-
-- Random author assignment in some cases (synthetic data)
-- TF-IDF doesn't capture semantic similarity
-- No workload balancing for reviewers
-- Arabic-only corpus
-
 ## Future Work
 
 - AraBERT embeddings for semantic understanding
