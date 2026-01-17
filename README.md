@@ -32,19 +32,6 @@ TF-IDF Vectorization → Sequential Disambiguation → Reviewer Recommendation
 - **OCR**: PaddleOCR for text extraction
 - **Data**: 1,454 Arabic articles from 5 academic platforms
 
-## Installation
-
-```bash
-git clone https://github.com/yourusername/reviewer-assignment-system.git
-cd reviewer-assignment-system
-
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-pip install -r requirements.txt
-pip install Tashaphyne arabic-stopwords paddlepaddle paddleocr
-```
-
 ## Quick Start
 
 ```python
